@@ -22,6 +22,17 @@ but should be addressed in future iterations.
   都道府県幸福度ランキング? Should be addressed in the main article, but a full
   comparative analysis can wait.
 
+## CEO Expansion — In-Scope (Phase 9–16, from /plan-ceo-review 2026-04-02)
+
+- [ ] **Phase 9: 视觉重设计** — 白底暖调数据新闻风，截图即海报。替换当前GitHub Dark主题。
+- [ ] **Phase 10: 移动端完全适配** — 竖屏优先布局，底部抽屉式侧栏，触摸手势地图。发布阻断项。
+- [ ] **Phase 11: 叙事层** — 首屏hero callout（「福井#1，东京#3」），每个都道府县自动生成惊喜结论chip。
+- [ ] **Phase 12: 方法论透明面板** — 点击任意维度/指标弹出详细卡片（定义+来源+年份+选择理由）。
+- [ ] **Phase 13: 分享功能** — URL参数编码选中都道府县+自定义权重，复制链接按钮。
+- [ ] **Phase 14: 截图模式** — 一键切换专用截图布局（1:1裁剪，出处水印，隐藏UI控件）。
+- [ ] **Phase 15: 市区町村视觉修复** — 分位数色标，大熊町异常值气泡注释，无数据城市斜线图案。
+- [ ] **Phase 16: Vercel部署** — git remote + Vercel配置 + 公开URL。工具帖发布前提。
+
 ## Design Debt (from /plan-design-review 2026-03-31)
 
 - [ ] **Header 指標数修正** — index.html header の「20指標」を「15指標」に修正、
