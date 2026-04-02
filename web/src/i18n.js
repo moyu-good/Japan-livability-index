@@ -92,11 +92,11 @@ const LANG_STRINGS = {
 
 // ─── 次元名 ────────────────────────────────────────────
 const DIM_LABELS = {
-  "経済力":     { ja: "経済力",     zh: "经济实力",   en: "Economy" },
-  "生活利便性": { ja: "生活利便性", zh: "生活便利度", en: "Convenience" },
-  "環境快適度": { ja: "環境快適度", zh: "环境舒适度", en: "Environment" },
-  "社会安全度": { ja: "社会安全度", zh: "社会安全度", en: "Safety" },
-  "将来性":     { ja: "将来性",     zh: "发展潜力",   en: "Future" },
+  "経済・労働": { ja: "経済・労働", zh: "经济与劳动", en: "Economy & Work" },
+  "居住・利便性": { ja: "居住・利便性", zh: "居住便利度", en: "Housing & Access" },
+  "環境・安全": { ja: "環境・安全", zh: "环境与安全", en: "Environment & Safety" },
+  "医療・教育": { ja: "医療・教育", zh: "医疗与教育", en: "Health & Education" },
+  "将来性":     { ja: "将来性",     zh: "发展潜力",   en: "Future Potential" },
 };
 
 // ─── プリセット名 ──────────────────────────────────────
