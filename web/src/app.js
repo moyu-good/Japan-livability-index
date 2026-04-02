@@ -9,11 +9,11 @@
 // ─── 定数 ───────────────────────────────────────────
 const DIMS = ["経済力", "生活利便性", "環境快適度", "社会安全度", "将来性"];
 const DIM_COLORS = {
-  "経済力":     "#388bfd",
-  "生活利便性": "#3fb950",
-  "環境快適度": "#d29922",
-  "社会安全度": "#f78166",
-  "将来性":     "#bc8cff",
+  "経済力":     "#1a52a0",
+  "生活利便性": "#2d7040",
+  "環境快適度": "#b07818",
+  "社会安全度": "#c0182b",
+  "将来性":     "#6d3db0",
 };
 
 // 次元の内訳説明（ツールチップ用）
@@ -160,12 +160,13 @@ function recomputeCityScores(cities) {
 function updateMapColors() {
   if (!svgReady || !colorScale) return;
   const scores = scoreData.map(d => d.total_score);
-  colorScale.domain([Math.min(...scores), Math.max(...scores)]);
+  const lo = Math.min(...scores), hi = Math.max(...scores);
+  colorScale.domain([lo, (lo + hi) / 2, hi]);
   d3.selectAll(".prefecture")
     .attr("fill", d => {
       const code = String(d.properties.id).padStart(2, "0");
       const s = scoreMap[code];
-      return s ? colorScale(s.total_score) : "#2d333b";
+      return s ? colorScale(s.total_score) : "#e8e4de";
     })
     .attr("aria-label", d => {
       const code = String(d.properties.id).padStart(2, "0");
@@ -203,7 +204,7 @@ function selectPref(code) {
   document.getElementById("detail-panel").scrollIntoView({ behavior: "smooth", block: "start" });
   document.querySelectorAll(".rank-item").forEach(el => {
     el.style.background = el.dataset.code === code
-      ? "rgba(56,139,253,0.12)" : "";
+      ? "rgba(192,24,43,0.07)" : "";
   });
 }
 
@@ -215,12 +216,11 @@ function refreshDetailPanel() {
     `${getPrefName(s.pref_name)} — #${s.rank}${rankSuffix} (${s.total_score.toFixed(1)})`;
   document.getElementById("detail-dims").innerHTML = DIMS.map(dim => {
     const val = Math.round(s[`dim_${dim}`] || 0);
-    const tip = DIM_TOOLTIPS[dim] || "";
     return `
       <div class="dim-row">
         <span class="dim-label">
           ${getDimLabel(dim)}
-          ${tip ? `<span class="dim-info" title="${tip}">ℹ</span>` : ""}
+          <button class="dim-info-btn" onclick="showMethodModal('${dim}')" title="指標の詳細" aria-label="${dim}の詳細">ℹ</button>
         </span>
         <div class="dim-bar-bg">
           <div class="dim-bar-fill" style="width:${val}%;background:${DIM_COLORS[dim]}"></div>
@@ -280,7 +280,7 @@ function renderRadarChart() {
   [25, 50, 75, 100].forEach(v => {
     const r = (v / 100) * maxR;
     svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", r)
-      .attr("fill", "none").attr("stroke", "#30363d").attr("stroke-width", 0.5);
+      .attr("fill", "none").attr("stroke", "#ddd8cf").attr("stroke-width", 0.5);
   });
 
   // Axis lines and labels
@@ -289,12 +289,12 @@ function renderRadarChart() {
     const x2 = cx + maxR * Math.cos(angle);
     const y2 = cy + maxR * Math.sin(angle);
     svg.append("line").attr("x1", cx).attr("y1", cy).attr("x2", x2).attr("y2", y2)
-      .attr("stroke", "#30363d").attr("stroke-width", 0.5);
+      .attr("stroke", "#ddd8cf").attr("stroke-width", 0.5);
     const lx = cx + (maxR + 16) * Math.cos(angle);
     const ly = cy + (maxR + 16) * Math.sin(angle);
     svg.append("text").attr("x", lx).attr("y", ly)
       .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
-      .attr("fill", "#9ca3af").attr("font-size", "8").text(getDimLabel(dim));
+      .attr("fill", "#797060").attr("font-size", "8").text(getDimLabel(dim));
   });
 
   function makePath(entry) {
@@ -309,34 +309,34 @@ function renderRadarChart() {
 
   // Prefecture 1
   svg.append("path").attr("d", makePath(s1))
-    .attr("fill", "rgba(56,139,253,0.2)").attr("stroke", "#388bfd").attr("stroke-width", 1.5);
+    .attr("fill", "rgba(26,82,160,0.12)").attr("stroke", "#1a52a0").attr("stroke-width", 1.5);
 
   // Prefecture 2 (comparison)
   if (s2) {
     svg.append("path").attr("d", makePath(s2))
-      .attr("fill", "rgba(247,129,102,0.15)").attr("stroke", "#f78166").attr("stroke-width", 1.5)
+      .attr("fill", "rgba(192,24,43,0.10)").attr("stroke", "#c0182b").attr("stroke-width", 1.5)
       .attr("stroke-dasharray", "4,3");
   }
 
   // Legend
   const legendY = size - 10;
   svg.append("circle").attr("cx", 10).attr("cy", legendY).attr("r", 4)
-    .attr("fill", "#388bfd");
+    .attr("fill", "#1a52a0");
   svg.append("text").attr("x", 18).attr("y", legendY + 1)
-    .attr("fill", "#e6edf3").attr("font-size", "8").attr("dominant-baseline", "middle")
+    .attr("fill", "#1c1a16").attr("font-size", "8").attr("dominant-baseline", "middle")
     .text(s1.pref_name);
   if (s2) {
     const offset = s1.pref_name.length * 9 + 26;
     svg.append("circle").attr("cx", offset).attr("cy", legendY).attr("r", 4)
-      .attr("fill", "#f78166");
+      .attr("fill", "#c0182b");
     svg.append("text").attr("x", offset + 8).attr("y", legendY + 1)
-      .attr("fill", "#e6edf3").attr("font-size", "8").attr("dominant-baseline", "middle")
+      .attr("fill", "#1c1a16").attr("font-size", "8").attr("dominant-baseline", "middle")
       .text(s2.pref_name);
   }
 
   if (!s2) {
     svg.append("text").attr("x", cx).attr("y", size - 4)
-      .attr("text-anchor", "middle").attr("fill", "#9ca3af").attr("font-size", "7")
+      .attr("text-anchor", "middle").attr("fill", "#797060").attr("font-size", "7")
       .text("もう1つ選択して比較");
   }
 }
@@ -436,6 +436,7 @@ function onSliderChange(dim, val) {
 function onWeightsChanged() {
   scoreData = recomputeScores(rawData, currentWeights);
   scoreMap = Object.fromEntries(scoreData.map(d => [d.pref_code, d]));
+  updateHeroBanner(scoreData);
   renderRankList();
   updateMapColors();
   if (currentDetailView === "radar" && selectedPref) renderRadarChart();
@@ -458,14 +459,11 @@ function downloadCSV() {
   showToast("✅ CSVダウンロード開始");
 }
 
-// ─── スクリーンショット ──────────────────────────────
+// ─── スクリーンショット（レガシー html2canvas） ──────
 async function takeScreenshot() {
-  const btn = document.getElementById("btn-screenshot");
-  btn.disabled = true;
-  btn.querySelector(".btn-icon").textContent = "⏳";
   try {
-    const canvas = await html2canvas(document.body, {
-      backgroundColor: "#0d1117",
+    const canvas = await html2canvas(document.getElementById("map-container"), {
+      backgroundColor: "#f7f4ef",
       scale: 2,
     });
     canvas.toBlob(blob => {
@@ -478,9 +476,6 @@ async function takeScreenshot() {
     });
   } catch {
     showToast("❌ スクリーンショットに失敗しました", 3000);
-  } finally {
-    btn.disabled = false;
-    btn.querySelector(".btn-icon").textContent = "📸";
   }
 }
 
@@ -638,9 +633,9 @@ function _renderCityLayer(prefCode, geo) {
   g.selectAll(".city-path").remove();
 
   const scores = cityScoreData.map(d => d.total_score);
-  const cityColorScale = d3.scaleSequential()
-    .domain([Math.min(...scores), Math.max(...scores)])
-    .interpolator(d3.interpolateRdYlGn);
+  const cityColorScale = d3.scaleQuantile()
+    .domain(scores.filter(s => s != null))
+    .range(["#fef3e2", "#fbd78a", "#f4a44a", "#e8652a", "#c0182b"]);
 
   g.selectAll(".city-path")
     .data(geo.features)
@@ -650,9 +645,9 @@ function _renderCityLayer(prefCode, geo) {
     .attr("fill", f => {
       const code = getCityCode(f.properties);
       const s = code ? cityScoreMap[code] : null;
-      return s ? cityColorScale(s.total_score) : "#3d434b";
+      return s ? cityColorScale(s.total_score) : "#e8e4de";
     })
-    .attr("stroke", "#1a1f27")
+    .attr("stroke", "#c8c4ba")
     .attr("stroke-width", 0.3)
     .on("mousemove", (event, f) => _showCityTooltip(event, f))
     .on("mouseleave", hideTooltip)
@@ -698,7 +693,7 @@ function _selectCity(cityCode) {
   // サイドバーハイライト
   document.querySelectorAll(".rank-item").forEach(el => {
     el.style.background = el.dataset.code === cityCode
-      ? "rgba(56,139,253,0.12)" : "";
+      ? "rgba(192,24,43,0.07)" : "";
   });
 
   // 詳細パネル
@@ -769,9 +764,9 @@ async function loadMap() {
   });
 
   const scores = scoreData.map(d => d.total_score);
-  colorScale = d3.scaleSequential()
-    .domain([Math.min(...scores), Math.max(...scores)])
-    .interpolator(d3.interpolateRdYlGn);
+  colorScale = d3.scaleLinear()
+    .domain([Math.min(...scores), (Math.min(...scores) + Math.max(...scores)) / 2, Math.max(...scores)])
+    .range(["#fef3e2", "#f4a060", "#c0182b"]);
 
   try {
     const topo = await d3.json("data/japan.topojson");
@@ -795,7 +790,7 @@ async function loadMap() {
       .attr("fill", d => {
         const code = String(d.properties.id).padStart(2, "0");
         const s = scoreMap[code];
-        return s ? colorScale(s.total_score) : "#2d333b";
+        return s ? colorScale(s.total_score) : "#e8e4de";
       })
       .attr("aria-label", d => {
         const code = String(d.properties.id).padStart(2, "0");
@@ -844,6 +839,125 @@ function hideTooltip() {
   document.getElementById("tooltip").style.display = "none";
 }
 
+// ─── ヒーローバナー ──────────────────────────────────
+function updateHeroBanner(data) {
+  if (!data || data.length === 0) return;
+  const sorted = [...data].sort((a, b) => b.total_score - a.total_score);
+  const top = sorted[0];
+  const tokyo = sorted.find(d => d.pref_code === "13");
+
+  document.getElementById("hero-name").textContent = top.pref_name;
+  document.getElementById("hero-score").textContent = top.total_score.toFixed(1) + "pt";
+
+  let insight = `総合スコア最高値`;
+  if (tokyo && tokyo.rank > 1) {
+    insight = `東京は #${tokyo.rank} — ${top.pref_name} が首位`;
+  }
+  document.getElementById("hero-insight").textContent = insight;
+  document.getElementById("hero-banner").classList.add("show");
+}
+
+function dismissHero() {
+  document.getElementById("hero-banner").classList.remove("show");
+}
+
+// ─── 方法論モーダル ──────────────────────────────────
+const DIM_DETAIL = {
+  "経済力": {
+    title: "経済力",
+    color: "#1a52a0",
+    indicators: [
+      { name: "県民所得（一人当たり）", source: "内閣府 県民経済計算", year: "2021", note: "高いほど高スコア" },
+      { name: "完全失業率", source: "総務省 労働力調査", year: "2022", note: "低いほど高スコア（逆転）" },
+      { name: "有効求人倍率", source: "厚生労働省 職業安定業務統計", year: "2022", note: "高いほど高スコア" },
+    ],
+    why: "生活水準・雇用環境の基盤を測定。在日華人が定住を検討する際の経済的安定性を反映。",
+  },
+  "生活利便性": {
+    title: "生活利便性",
+    color: "#2d7040",
+    indicators: [
+      { name: "自動車保有台数（交通利便性代理）", source: "自動車検査登録情報協会", year: "2022", note: "逆転（依存度が低いほど交通網が発達）" },
+      { name: "持ち家比率", source: "総務省 住宅・土地統計調査", year: "2018", note: "高いほど安定した住環境" },
+      { name: "住宅延べ面積（一人当たり）", source: "総務省 住宅・土地統計調査", year: "2018", note: "広いほど高スコア" },
+      { name: "家賃（1畳当たり）", source: "国土交通省 住宅市場動向調査", year: "2022", note: "低いほど高スコア（逆転）" },
+    ],
+    why: "日常生活のコスト・快適度・移動利便性を総合評価。住居コストは在日華人に特に重要。",
+  },
+  "環境快適度": {
+    title: "環境快適度",
+    color: "#b07818",
+    indicators: [
+      { name: "年間日照時間", source: "気象庁 気象統計", year: "2020-2022平均", note: "長いほど高スコア" },
+      { name: "年間降水量", source: "気象庁 気象統計", year: "2020-2022平均", note: "少ないほど高スコア（逆転）" },
+    ],
+    why: "気候は長期居住の満足度に大きく影響。梅雨・豪雪地域のデメリットを定量化。",
+  },
+  "社会安全度": {
+    title: "社会安全度",
+    color: "#c0182b",
+    indicators: [
+      { name: "犯罪発生率（人口10万対）", source: "警察庁 犯罪統計", year: "2022", note: "低いほど高スコア（逆転）" },
+      { name: "交通事故発生率（人口10万対）", source: "警察庁 交通統計", year: "2022", note: "低いほど高スコア（逆転）" },
+      { name: "病院数（人口10万対）", source: "厚生労働省 医療施設調査", year: "2021", note: "多いほど高スコア" },
+      { name: "医師数（人口10万対）", source: "厚生労働省 医師・歯科医師・薬剤師統計", year: "2020", note: "多いほど高スコア" },
+    ],
+    why: "安心して生活できる環境の指標。子育て世代・高齢者を抱える家族に特に重要。",
+  },
+  "将来性": {
+    title: "将来性",
+    color: "#6d3db0",
+    indicators: [
+      { name: "人口増減率", source: "総務省 住民基本台帳", year: "2022", note: "増加ほど高スコア" },
+      { name: "転入超過率", source: "総務省 住民基本台帳移動報告", year: "2022", note: "転入超過ほど高スコア" },
+      { name: "高齢化率（65歳以上割合）", source: "総務省 統計局 e-Stat", year: "2022", note: "低いほど高スコア（逆転）" },
+    ],
+    why: "地域の持続可能性・活力を測定。人口流入が続く地域は行政サービスの維持・向上が期待できる。",
+  },
+};
+
+function showMethodModal(dim) {
+  const detail = DIM_DETAIL[dim];
+  if (!detail) return;
+  document.getElementById("method-modal-title").innerHTML =
+    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${detail.color};margin-right:6px"></span>${detail.title}`;
+  document.getElementById("method-modal-body").innerHTML = `
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.8rem">${detail.why}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:0.3rem 0.4rem;color:var(--muted)">指標</th>
+          <th style="text-align:left;padding:0.3rem 0.4rem;color:var(--muted)">出典</th>
+          <th style="text-align:left;padding:0.3rem 0.4rem;color:var(--muted)">年度</th>
+          <th style="text-align:left;padding:0.3rem 0.4rem;color:var(--muted)">方向</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${detail.indicators.map(ind => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:0.35rem 0.4rem">${ind.name}</td>
+            <td style="padding:0.35rem 0.4rem;color:var(--muted)">${ind.source}</td>
+            <td style="padding:0.35rem 0.4rem;color:var(--muted)">${ind.year}</td>
+            <td style="padding:0.35rem 0.4rem;color:var(--muted)">${ind.note}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+  document.getElementById("method-modal").classList.add("show");
+}
+
+function closeMethodModal() {
+  document.getElementById("method-modal").classList.remove("show");
+}
+
+// ─── スクリーンショットモード ────────────────────────
+function enterScreenshotMode() {
+  document.body.classList.add("screenshot-mode");
+}
+
+function exitScreenshotMode() {
+  document.body.classList.remove("screenshot-mode");
+}
+
 // ─── データ読み込み ──────────────────────────────────
 async function loadData() {
   // URL パラメータから状態を復元
@@ -861,6 +975,7 @@ async function loadData() {
   }
   scoreData = recomputeScores(rawData, currentWeights);
   scoreMap = Object.fromEntries(scoreData.map(d => [d.pref_code, d]));
+  updateHeroBanner(scoreData);
   // 言語初期化（保存済み言語を反映）
   if (typeof setLanguage === "function") {
     setLanguage(window.currentLang || "ja");

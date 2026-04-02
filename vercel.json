@@ -1,0 +1,7 @@
+{
+  "outputDirectory": "web",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ]
+}

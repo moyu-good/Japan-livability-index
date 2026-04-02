@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Japan Livability Index - Wireframe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
+  .header { padding: 20px 32px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 20px; color: #fff; font-weight: 600; }
+  .header h1 span { color: #ff6b6b; font-size: 14px; margin-left: 8px; }
+  .header .lang-switch { display: flex; gap: 8px; }
+  .header .lang-switch button { background: transparent; border: 1px solid #555; color: #aaa; padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .header .lang-switch button.active { background: #ff6b6b; border-color: #ff6b6b; color: #fff; }
+  .main { display: flex; height: calc(100vh - 65px); }
+  .sidebar-left { width: 280px; border-right: 1px solid #333; padding: 20px; overflow-y: auto; }
+  .sidebar-left h2 { font-size: 14px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .presets { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .preset-btn { background: #252540; border: 1px solid #444; color: #ccc; padding: 10px 14px; border-radius: 8px; text-align: left; cursor: pointer; font-size: 13px; }
+  .preset-btn.active { border-color: #ff6b6b; background: #2a1f2f; color: #fff; }
+  .preset-btn small { display: block; color: #888; font-size: 11px; margin-top: 2px; }
+  .slider-group { margin-bottom: 16px; }
+  .slider-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .slider-label span { font-size: 13px; }
+  .slider-label .weight { color: #ff6b6b; font-weight: bold; font-size: 13px; }
+  .slider-track { width: 100%; height: 6px; background: #333; border-radius: 3px; }
+  .slider-fill { height: 100%; background: #ff6b6b; border-radius: 3px; }
+  .map-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: #16162a; }
+  .map-placeholder { width: 500px; height: 600px; border: 2px dashed #444; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #666; }
+  .map-placeholder .japan-outline { font-size: 120px; opacity: 0.3; }
+  .map-placeholder p { font-size: 14px; }
+  .tooltip-mock { position: absolute; top: 80px; left: 50%; transform: translateX(-20%); background: #252540; border: 1px solid #555; border-radius: 12px; padding: 16px 20px; width: 220px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 10; }
+  .tooltip-mock h3 { font-size: 16px; color: #fff; margin-bottom: 4px; }
+  .tooltip-mock .rank { color: #ff6b6b; font-size: 24px; font-weight: bold; }
+  .tooltip-mock .score { color: #aaa; font-size: 13px; }
+  .tooltip-mock .mini-bars { margin-top: 12px; }
+  .tooltip-mock .mini-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; }
+  .tooltip-mock .mini-bar .bar-bg { flex: 1; height: 4px; background: #333; border-radius: 2px; }
+  .tooltip-mock .mini-bar .bar-fill { height: 100%; border-radius: 2px; }
+  .sidebar-right { width: 320px; border-left: 1px solid #333; overflow-y: auto; }
+  .sidebar-right h2 { font-size: 14px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; padding: 20px 20px 12px; }
+  .rank-item { display: flex; align-items: center; padding: 12px 20px; border-bottom: 1px solid #222; cursor: pointer; }
+  .rank-item:hover { background: #252540; }
+  .rank-item.selected { background: #2a1f2f; border-left: 3px solid #ff6b6b; }
+  .rank-num { font-size: 18px; font-weight: bold; color: #ff6b6b; width: 36px; text-align: center; }
+  .rank-info { flex: 1; margin-left: 12px; }
+  .rank-name { font-size: 14px; color: #fff; }
+  .rank-name-jp { font-size: 11px; color: #888; }
+  .rank-score { font-size: 14px; font-weight: bold; color: #ccc; }
+  .rank-bar { width: 60px; height: 4px; background: #333; border-radius: 2px; margin-top: 4px; }
+  .rank-bar-fill { height: 100%; background: #ff6b6b; border-radius: 2px; }
+  .share-section { padding: 16px 20px; border-top: 1px solid #333; }
+  .share-btn { width: 100%; background: #ff6b6b; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .detail-panel { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #252540; border: 1px solid #444; border-radius: 16px; padding: 24px; width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .detail-header h3 { font-size: 20px; color: #fff; }
+  .detail-header .detail-rank { background: #ff6b6b; color: #fff; padding: 4px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+  .dimension-bars { display: flex; flex-direction: column; gap: 8px; }
+  .dim-bar { display: flex; align-items: center; gap: 10px; }
+  .dim-bar .dim-label { width: 80px; font-size: 12px; color: #aaa; text-align: right; }
+  .dim-bar .dim-track { flex: 1; height: 8px; background: #333; border-radius: 4px; }
+  .dim-bar .dim-fill { height: 100%; border-radius: 4px; }
+  .dim-bar .dim-val { width: 40px; font-size: 12px; color: #ccc; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>日本宜居度指数 <span>AI + 20项政府数据</span></h1>
+  <div class="lang-switch">
+    <button class="active">中文</button>
+    <button>日本語</button>
+    <button>EN</button>
+  </div>
+</div>
+<div class="main">
+  <div class="sidebar-left">
+    <h2>权重预设</h2>
+    <div class="presets">
+      <button class="preset-btn active">家庭向け <small>重视安全 + 医疗 + 教育</small></button>
+      <button class="preset-btn">单身经济向け <small>重视收入 + 便利性 + 娱乐</small></button>
+      <button class="preset-btn">退休养老向け <small>重视环境 + 医疗 + 生活成本</small></button>
+      <button class="preset-btn">自定义 <small>拖动下方滑块</small></button>
+    </div>
+    <h2 style="margin-top: 8px;">维度权重</h2>
+    <div class="slider-group"><div class="slider-label"><span>经济力</span><span class="weight">25%</span></div><div class="slider-track"><div class="slider-fill" style="width:25%"></div></div></div>
+    <div class="slider-group"><div class="slider-label"><span>生活便利性</span><span class="weight">30%</span></div><div class="slider-track"><div class="slider-fill" style="width:30%"></div></div></div>
+    <div class="slider-group"><div class="slider-label"><span>环境舒适度</span><span class="weight">20%</span></div><div class="slider-track"><div class="slider-fill" style="width:20%"></div></div></div>
+    <div class="slider-group"><div class="slider-label"><span>社会安全</span><span class="weight">10%</span></div><div class="slider-track"><div class="slider-fill" style="width:10%"></div></div></div>
+    <div class="slider-group"><div class="slider-label"><span>未来潜力</span><span class="weight">15%</span></div><div class="slider-track"><div class="slider-fill" style="width:15%"></div></div></div>
+  </div>
+  <div class="map-area">
+    <div class="map-placeholder">
+      <div class="japan-outline">&#x1F5FE;</div>
+      <p>D3.js + TopoJSON 日本地图</p>
+      <p style="font-size: 11px; color: #555;">47都道府県 choropleth</p>
+    </div>
+    <div class="tooltip-mock">
+      <h3>福井県</h3>
+      <div class="rank">#1</div>
+      <div class="score">综合得分: 82.4 / 100</div>
+      <div class="mini-bars">
+        <div class="mini-bar"><span style="width:50px">经济</span><div class="bar-bg"><div class="bar-fill" style="width:72%;background:#4ecdc4"></div></div></div>
+        <div class="mini-bar"><span style="width:50px">便利</span><div class="bar-bg"><div class="bar-fill" style="width:65%;background:#45b7d1"></div></div></div>
+        <div class="mini-bar"><span style="width:50px">环境</span><div class="bar-bg"><div class="bar-fill" style="width:91%;background:#96ceb4"></div></div></div>
+        <div class="mini-bar"><span style="width:50px">安全</span><div class="bar-bg"><div class="bar-fill" style="width:88%;background:#ffeaa7"></div></div></div>
+        <div class="mini-bar"><span style="width:50px">潜力</span><div class="bar-bg"><div class="bar-fill" style="width:79%;background:#dfe6e9"></div></div></div>
+      </div>
+    </div>
+    <div class="detail-panel">
+      <div class="detail-header"><h3>福井県 详细数据</h3><div class="detail-rank">#1 综合排名</div></div>
+      <div class="dimension-bars">
+        <div class="dim-bar"><div class="dim-label">经济力</div><div class="dim-track"><div class="dim-fill" style="width:72%;background:#4ecdc4"></div></div><div class="dim-val">72.1</div></div>
+        <div class="dim-bar"><div class="dim-label">生活便利</div><div class="dim-track"><div class="dim-fill" style="width:65%;background:#45b7d1"></div></div><div class="dim-val">65.3</div></div>
+        <div class="dim-bar"><div class="dim-label">环境舒适</div><div class="dim-track"><div class="dim-fill" style="width:91%;background:#96ceb4"></div></div><div class="dim-val">91.2</div></div>
+        <div class="dim-bar"><div class="dim-label">社会安全</div><div class="dim-track"><div class="dim-fill" style="width:88%;background:#ffeaa7"></div></div><div class="dim-val">88.0</div></div>
+        <div class="dim-bar"><div class="dim-label">未来潜力</div><div class="dim-track"><div class="dim-fill" style="width:79%;background:#dfe6e9"></div></div><div class="dim-val">79.4</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-right">
+    <h2>综合排名</h2>
+    <div class="rank-item selected"><div class="rank-num">1</div><div class="rank-info"><div class="rank-name">福井</div><div class="rank-name-jp">福井県</div></div><div><div class="rank-score">82.4</div><div class="rank-bar"><div class="rank-bar-fill" style="width:82%"></div></div></div></div>
+    <div class="rank-item"><div class="rank-num">2</div><div class="rank-info"><div class="rank-name">长野</div><div class="rank-name-jp">長野県</div></div><div><div class="rank-score">80.1</div><div class="rank-bar"><div class="rank-bar-fill" style="width:80%"></div></div></div></div>
+    <div class="rank-item"><div class="rank-num">3</div><div class="rank-info"><div class="rank-name">石川</div><div class="rank-name-jp">石川県</div></div><div><div class="rank-score">79.5</div><div class="rank-bar"><div class="rank-bar-fill" style="width:79%"></div></div></div></div>
+    <div class="rank-item"><div class="rank-num">4</div><div class="rank-info"><div class="rank-name">富山</div><div class="rank-name-jp">富山県</div></div><div><div class="rank-score">78.2</div><div class="rank-bar"><div class="rank-bar-fill" style="width:78%"></div></div></div></div>
+    <div class="rank-item"><div class="rank-num">5</div><div class="rank-info"><div class="rank-name">静冈</div><div class="rank-name-jp">静岡県</div></div><div><div class="rank-score">77.8</div><div class="rank-bar"><div class="rank-bar-fill" style="width:77%"></div></div></div></div>
+    <div class="rank-item" style="opacity:0.5"><div class="rank-num" style="color:#666">...</div><div class="rank-info"><div class="rank-name" style="color:#666">...</div></div></div>
+    <div class="rank-item"><div class="rank-num" style="color:#888">12</div><div class="rank-info"><div class="rank-name">东京</div><div class="rank-name-jp">東京都</div></div><div><div class="rank-score">71.3</div><div class="rank-bar"><div class="rank-bar-fill" style="width:71%"></div></div></div></div>
+    <div class="share-section"><button class="share-btn">生成分享卡片</button></div>
+  </div>
+</div>
+</body>
+</html>

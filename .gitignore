@@ -25,8 +25,9 @@ notebooks/.ipynb_checkpoints/
 .DS_Store
 Thumbs.db
 
-# gstack
+# gstack / claude
 .gstack/
+.claude/
 
 # API spec (binary, not needed in repo)
 API-specVer3.0.docx
