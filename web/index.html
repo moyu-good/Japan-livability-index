@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>日本 都道府県 宜居度指数 — Japan Livability Index</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="src/i18n.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9ca3af;
+      --accent: #f78166;
+      --gold: #d29922;
+      --green: #3fb950;
+      --blue: #388bfd;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Focus visible (a11y) ── */
+    *:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    /* ── Sample data warning banner ── */
+    #sample-banner {
+      display: none;
+      background: rgba(247, 129, 102, 0.15);
+      color: var(--accent);
+      padding: 0.5rem 1.5rem;
+      font-size: 0.82rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      border-bottom: 1px solid rgba(247, 129, 102, 0.3);
+    }
+    #sample-banner.show { display: flex; }
+    #sample-banner button {
+      background: none; border: none; color: var(--accent);
+      cursor: pointer; font-size: 1rem; padding: 0.2rem;
+      line-height: 1;
+    }
+    #sample-banner button:hover { color: var(--text); }
+
+    /* ── Header ── */
+    header {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; white-space: nowrap; }
+    header p { color: var(--muted); font-size: 0.85rem; flex: 1; }
+    .header-actions {
+      display: flex; gap: 0.4rem; flex-shrink: 0;
+    }
+    .header-btn {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); cursor: pointer; border-radius: 6px;
+      padding: 0.35rem 0.6rem; font-size: 0.78rem;
+      display: flex; align-items: center; gap: 0.3rem;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .header-btn:hover { border-color: var(--blue); color: var(--text); }
+    .header-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .header-btn .btn-icon { font-size: 0.9rem; }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── Map ── */
+    #map-container {
+      position: relative;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    #map { width: 100%; height: 100%; }
+    #map svg { width: 100%; height: 100%; }
+    #map-loading {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 0.75rem;
+      color: var(--muted); font-size: 0.9rem;
+    }
+    #map-loading .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #map-error {
+      position: absolute; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 0.5rem;
+      color: var(--muted); font-size: 0.85rem; text-align: center; padding: 2rem;
+    }
+    #map-error code {
+      font-size: 0.75rem; background: var(--bg);
+      padding: 0.25rem 0.5rem; border-radius: 4px;
+      color: var(--accent);
+    }
+    .prefecture {
+      stroke: var(--border); stroke-width: 0.5;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .prefecture:hover { opacity: 0.75; stroke-width: 1.5; }
+    .prefecture.selected { stroke: var(--accent); stroke-width: 2; }
+    #tooltip {
+      position: absolute;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 0.6rem 0.9rem; border-radius: 8px;
+      pointer-events: none; font-size: 0.82rem;
+      display: none; z-index: 10; min-width: 170px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    #tooltip .t-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem; }
+    #tooltip .t-row {
+      display: flex; justify-content: space-between; gap: 1rem;
+      color: var(--muted);
+    }
+    #tooltip .t-row span:last-child { color: var(--text); font-weight: 600; }
+    .legend {
+      position: absolute; bottom: 1rem; left: 1rem;
+      background: rgba(22,27,34,0.92); padding: 0.6rem 0.8rem;
+      border-radius: 8px; border: 1px solid var(--border); font-size: 0.72rem;
+    }
+    .legend-title { font-weight: 700; margin-bottom: 0.4rem; }
+    .legend-bar {
+      width: 140px; height: 8px; border-radius: 4px;
+      background: linear-gradient(to right, #1a4e79, #388bfd, #3fb950, #d29922, #f78166);
+      margin-bottom: 0.25rem;
+    }
+    .legend-labels { display: flex; justify-content: space-between; color: var(--muted); }
+
+    /* ── Language switcher ── */
+    .lang-switcher {
+      display: flex; gap: 0; border-radius: 6px; overflow: hidden;
+      border: 1px solid var(--border); flex-shrink: 0;
+    }
+    .lang-btn {
+      padding: 0.3rem 0.55rem; font-size: 0.75rem;
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; transition: all 0.15s; font-weight: 500;
+    }
+    .lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+    .lang-btn:hover { color: var(--text); }
+    .lang-btn.active { background: var(--blue); color: #fff; font-weight: 700; }
+
+    /* ── Zoom controls ── */
+    .zoom-controls {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      z-index: 5;
+    }
+    .zoom-btn {
+      width: 32px; height: 32px;
+      background: rgba(22,27,34,0.9); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px; cursor: pointer;
+      font-size: 1rem; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .zoom-btn:hover { border-color: var(--blue); color: var(--text); }
+    .zoom-hint {
+      position: absolute; bottom: 0.5rem; right: 0.5rem;
+      font-size: 0.68rem; color: var(--muted);
+      background: rgba(22,27,34,0.7); padding: 0.2rem 0.4rem; border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      display: flex; flex-direction: column;
+      background: var(--surface); overflow: hidden;
+    }
+
+    /* ── Weight Panel ── */
+    #weight-panel {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #weight-panel .wp-label {
+      font-size: 0.72rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .preset-buttons {
+      display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+    }
+    .preset-btn {
+      padding: 0.3rem 0.65rem; border-radius: 20px; font-size: 0.75rem;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .preset-btn:hover { border-color: var(--blue); color: var(--text); }
+    .preset-btn.active {
+      background: var(--blue); border-color: var(--blue);
+      color: #fff; font-weight: 600;
+    }
+    .custom-toggle {
+      font-size: 0.72rem; color: var(--blue); cursor: pointer;
+      display: flex; align-items: center; gap: 0.3rem;
+      padding: 0.2rem 0; width: fit-content;
+    }
+    .custom-toggle:hover { color: var(--text); }
+    .custom-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+    .custom-toggle.open .arrow { transform: rotate(90deg); }
+    #custom-sliders {
+      display: none; margin-top: 0.6rem;
+      padding: 0.6rem 0.5rem 0.2rem;
+      background: var(--bg); border-radius: 6px;
+    }
+    #custom-sliders.show { display: block; }
+    .slider-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .slider-dim { width: 68px; font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+    .slider-row input[type=range] {
+      flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+      background: var(--border); border-radius: 2px; cursor: pointer;
+    }
+    .slider-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--blue); cursor: pointer;
+    }
+    .slider-pct {
+      width: 28px; text-align: right; font-size: 0.72rem;
+      color: var(--text); font-variant-numeric: tabular-nums;
+    }
+    .weight-total {
+      font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; text-align: right;
+    }
+    .weight-total.error { color: var(--accent); }
+
+    /* ── Rank list ── */
+    #rank-section { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; }
+    #rank-section h2 {
+      font-size: 1rem; margin-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;
+    }
+    .rank-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.5rem 0.3rem; border-bottom: 1px solid rgba(48,54,61,0.5);
+      cursor: pointer; border-radius: 4px; transition: background 0.1s;
+    }
+    .rank-item:hover { background: rgba(255,255,255,0.04); }
+    .rank-badge {
+      width: 1.8rem; height: 1.8rem; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.72rem; flex-shrink: 0;
+    }
+    .rank-1 { background: #d29922; color: #000; }
+    .rank-2 { background: #8b949e; color: #000; }
+    .rank-3 { background: #c7542e; color: #fff; }
+    .rank-other { background: var(--border); color: var(--muted); }
+    .rank-name { font-weight: 600; flex: 1; font-size: 0.88rem; }
+    .rank-score { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      margin: 0.6rem 0 0; padding: 0.8rem;
+      background: var(--bg); border-radius: 8px;
+    }
+    .detail-panel h3 { font-size: 0.9rem; margin-bottom: 0.6rem; }
+    .detail-empty {
+      color: var(--muted); font-size: 0.82rem; text-align: center;
+      padding: 1.5rem 0.5rem;
+    }
+    .detail-empty .arrow-hint {
+      display: inline-block; animation: bounce 1.5s ease infinite;
+      font-size: 1.2rem; margin-bottom: 0.4rem;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .detail-content { display: none; }
+    .detail-content.show { display: block; }
+    .dim-row {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;
+    }
+    .dim-label {
+      width: 68px; font-size: 0.7rem; color: var(--muted); flex-shrink: 0;
+      display: flex; align-items: center; gap: 0.2rem;
+    }
+    .dim-info {
+      cursor: help; color: var(--border); font-size: 0.65rem;
+      transition: color 0.15s; flex-shrink: 0; line-height: 1;
+    }
+    .dim-info:hover { color: var(--blue); }
+    .dim-info[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 0.4rem 0.6rem; border-radius: 6px;
+      font-size: 0.7rem; color: var(--text); white-space: pre-line;
+      max-width: 220px; z-index: 20; pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      margin-left: 4px; margin-top: -2px;
+      line-height: 1.4;
+    }
+    .dim-row { position: relative; }
+    .dim-bar-bg {
+      flex: 1; height: 7px; background: var(--border);
+      border-radius: 3px; overflow: hidden;
+    }
+    .dim-bar-fill {
+      height: 100%; border-radius: 3px; transition: width 0.35s ease;
+    }
+    .dim-val { width: 26px; text-align: right; font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+
+    /* ── View toggle (bar/radar) ── */
+    .view-toggle {
+      display: flex; gap: 0; margin-bottom: 0.5rem; border-radius: 6px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .view-toggle button {
+      flex: 1; padding: 0.3rem 0; font-size: 0.7rem;
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .view-toggle button.active {
+      background: var(--blue); color: #fff; font-weight: 600;
+    }
+    .view-toggle button:hover:not(.active) { color: var(--text); }
+
+    /* ── Radar chart ── */
+    #radar-container { display: none; text-align: center; }
+    #radar-container.show { display: block; }
+    #radar-container svg { max-width: 100%; }
+
+    /* ── Comparison dropdown ── */
+    .compare-section {
+      margin-top: 0.5rem; padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .compare-section label {
+      font-size: 0.72rem; color: var(--muted); display: block; margin-bottom: 0.3rem;
+    }
+    .compare-section select {
+      width: 100%; padding: 0.35rem 0.5rem; font-size: 0.78rem;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px;
+      cursor: pointer;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(100%);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 0.6rem 1rem; border-radius: 8px;
+      font-size: 0.82rem; z-index: 100;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      opacity: 0; transition: all 0.2s ease;
+      pointer-events: none;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* ── City drill-down ── */
+    .city-path {
+      cursor: pointer;
+      stroke: rgba(255,255,255,0.12);
+      stroke-width: 0.3;
+      transition: opacity 0.12s;
+    }
+    .city-path:hover { opacity: 0.75; stroke-width: 0.8; stroke: rgba(255,255,255,0.35); }
+    .city-path.selected { stroke: var(--accent); stroke-width: 1.5; }
+
+    /* ドリルバックボタン */
+    #drill-back {
+      display: none;
+      align-items: center; gap: 0.6rem;
+      padding: 0.5rem 0.8rem;
+      background: rgba(56,139,253,0.1);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem; flex-shrink: 0;
+    }
+    #drill-back button {
+      background: transparent; border: 1px solid var(--blue);
+      color: var(--blue); border-radius: 6px; cursor: pointer;
+      padding: 0.25rem 0.6rem; font-size: 0.75rem;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    #drill-back button:hover { background: var(--blue); color: #fff; }
+    #drill-back-label { color: var(--muted); font-size: 0.78rem; }
+
+    /* ドリルダウンボタン（詳細パネル内） */
+    #detail-drill-btn {
+      display: none;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border);
+    }
+    .drill-btn {
+      width: 100%; padding: 0.45rem 0; font-size: 0.78rem;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--blue); border-radius: 6px; cursor: pointer;
+      transition: all 0.15s; display: flex; align-items: center;
+      justify-content: center; gap: 0.3rem;
+    }
+    .drill-btn:hover { background: rgba(56,139,253,0.1); border-color: var(--blue); }
+
+    /* ドリルダウン中の市区町村ヘッダー */
+    .drill-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 0.35rem 0.3rem 0.5rem; margin-bottom: 0.1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .drill-pref-name { font-size: 0.88rem; font-weight: 700; }
+    .drill-city-count { font-size: 0.72rem; color: var(--muted); }
+
+    /* 市区町村データ注記 */
+    .city-data-note {
+      font-size: 0.68rem; color: var(--muted);
+      margin-bottom: 0.5rem; padding: 0.3rem 0.4rem;
+      background: rgba(48,54,61,0.5); border-radius: 4px;
+      border-left: 2px solid var(--gold);
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 55vw 1fr;
+      }
+      #map-container { border-right: none; border-bottom: 1px solid var(--border); }
+      #sidebar { max-height: 50vh; }
+      header h1 { font-size: 1.1rem; }
+      header p { display: none; }
+      .header-btn span:not(.btn-icon) { display: none; }
+      .header-btn { padding: 0.35rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sample data warning banner -->
+  <div id="sample-banner" role="alert">
+    <span>&#9888; サンプルデータを表示中 &#8212; 実データは data/livability_scores.json を配置してください</span>
+    <button onclick="dismissBanner()" aria-label="閉じる">&times;</button>
+  </div>
+
+  <header>
+    <h1 id="header-title" data-i18n="title">&#x1F5FE; 日本 都道府県 宜居度指数</h1>
+    <p id="header-subtitle" data-i18n="subtitle">47都道府県・16指標のデータ分析。あなたに合った居住地を探す。</p>
+    <div class="header-actions">
+      <div class="lang-switcher" role="group" aria-label="Language">
+        <button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')">日</button>
+        <button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')">中</button>
+        <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">EN</button>
+      </div>
+      <button class="header-btn" onclick="downloadCSV()" title="CSVダウンロード">
+        <span class="btn-icon">&#128203;</span><span data-i18n="btn_csv">CSV</span>
+      </button>
+      <button class="header-btn" id="btn-screenshot" onclick="takeScreenshot()" title="スクリーンショット">
+        <span class="btn-icon">&#128248;</span><span data-i18n="btn_screenshot">截図</span>
+      </button>
+      <button class="header-btn" onclick="shareURL()" title="URLをコピー">
+        <span class="btn-icon">&#128279;</span><span data-i18n="btn_share">共有</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Map -->
+    <div id="map-container">
+      <div id="map" aria-label="日本都道府県地図"></div>
+      <div id="map-loading">
+        <div class="spinner"></div>
+        <span>地図データを読み込み中...</span>
+      </div>
+      <div id="map-error">
+        <span>地図データが見つかりません</span>
+        <code>web/public/japan.topojson</code>
+        <span style="font-size:0.75rem">
+          <a href="https://github.com/dataofjapan/land" target="_blank"
+             style="color:var(--blue)">dataofjapan/land</a> からダウンロードして配置してください
+        </span>
+      </div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="resetMapZoom()" title="ズームリセット (ダブルクリックでもリセット)">&#8634;</button>
+      </div>
+      <div class="zoom-hint" data-i18n="zoom_hint">スクロール: ズーム　ドラッグ: 移動　ダブルクリック: リセット</div>
+      <div id="tooltip"></div>
+      <div class="legend">
+        <div class="legend-title" data-i18n="legend_title">総合スコア</div>
+        <div class="legend-bar"></div>
+        <div class="legend-labels"><span data-i18n="legend_low">低</span><span data-i18n="legend_high">高</span></div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <!-- Weight presets -->
+      <div id="weight-panel">
+        <div class="wp-label" data-i18n="weight_label">評価の重みづけ</div>
+        <div class="preset-buttons" id="preset-buttons"></div>
+        <div class="custom-toggle" id="custom-toggle" onclick="toggleCustomSliders()"
+             role="button" tabindex="0" aria-expanded="false">
+          <span class="arrow">&#9654;</span> <span data-i18n="custom_label">カスタム設定</span>
+        </div>
+        <div id="custom-sliders">
+          <!-- dynamically filled -->
+        </div>
+      </div>
+
+      <!-- Drill-down back bar (hidden until drill-in) -->
+      <div id="drill-back">
+        <button onclick="drillBack()">← 都道府県に戻る</button>
+        <span id="drill-back-label"></span>
+      </div>
+
+      <!-- Rank list -->
+      <div id="rank-section">
+        <h2 data-i18n="ranking_title">ランキング</h2>
+        <div id="rank-list" role="list" aria-label="都道府県ランキング"></div>
+        <div class="detail-panel" id="detail-panel">
+          <!-- Empty state -->
+          <div class="detail-empty" id="detail-empty">
+            <div class="arrow-hint">&#8593;</div>
+            <div data-i18n="detail_empty">都道府県をクリックして詳細を表示</div>
+          </div>
+          <!-- Content (hidden until selection) -->
+          <div class="detail-content" id="detail-content">
+            <h3 id="detail-name"></h3>
+            <div class="view-toggle" id="view-toggle">
+              <button class="active" data-view="bar" onclick="setDetailView('bar')" data-i18n="view_bar">バー</button>
+              <button data-view="radar" onclick="setDetailView('radar')" data-i18n="view_radar">レーダー</button>
+            </div>
+            <div id="detail-dims"></div>
+            <div id="radar-container"></div>
+            <div class="compare-section">
+              <label for="compare-select" data-i18n="compare_label">&#8596; 比較対象を選択</label>
+              <select id="compare-select" onchange="onCompareChange(this.value)">
+                <option value="">-- 比較なし --</option>
+              </select>
+            </div>
+            <!-- Drill-down button (visible when prefecture is selected) -->
+            <div id="detail-drill-btn">
+              <button class="drill-btn" onclick="drillDown(selectedPref)">
+                🔍 市区町村を見る
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="src/app.js"></script>
+</body>
+</html>

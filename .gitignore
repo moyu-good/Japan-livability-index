@@ -1,0 +1,29 @@
+# 環境・シークレット（API Key 等）
+.env
+*.env
+
+# 生データ・加工データ（API取得データは外部公開しない）
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# gstack
+.gstack/
+
+# API spec (binary, not needed in repo)
+API-specVer3.0.docx
