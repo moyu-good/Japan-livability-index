@@ -11,11 +11,16 @@ Usage:
 """
 
 import os
+import sys
 import json
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
+
+# Windows terminal UTF-8 fix
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 GITHUB_API = "https://api.github.com/repos/niiyz/JapanCityGeoJson/contents/topojson"
 RAW_BASE   = "https://raw.githubusercontent.com/niiyz/JapanCityGeoJson/master/topojson"
@@ -135,7 +140,7 @@ def build_pref_geojson(pref_code: str, max_workers: int = 10) -> dict:
     """1都道府県の全市区町村 GeoJSON FeatureCollection を構築"""
     city_codes = list_city_codes(pref_code)
     if not city_codes:
-        print(f"  ⚠  {pref_code}: 市区町村コード取得失敗")
+        print(f"  WARN {pref_code}: city code list fetch failed")
         return {"type": "FeatureCollection", "features": []}
 
     all_features = []
@@ -154,7 +159,7 @@ def build_pref_geojson(pref_code: str, max_workers: int = 10) -> dict:
                 failed += 1
 
     if failed:
-        print(f"  ⚠  {pref_code}: {failed}/{len(city_codes)} 件の取得失敗")
+        print(f"  WARN {pref_code}: {failed}/{len(city_codes)} failed")
 
     return {"type": "FeatureCollection", "features": all_features}
 
@@ -164,14 +169,12 @@ def build_pref_geojson(pref_code: str, max_workers: int = 10) -> dict:
 def run():
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    # 既存ファイルをスキップするか確認
+    # 既存ファイルは自動スキップ
     existing = [p for p in PREF_CODES
                 if os.path.exists(f"{OUT_DIR}/{p}.json")]
+    skip_existing = len(existing) > 0
     if existing:
-        ans = input(f"{len(existing)} 件の既存ファイルがあります。スキップしますか？ [Y/n]: ").strip().lower()
-        skip_existing = ans != "n"
-    else:
-        skip_existing = False
+        print(f"  {len(existing)} existing files found - skipping")
 
     print(f"\n{'=' * 50}")
     print(f"市区町村境界データ ダウンロード開始")
@@ -197,13 +200,13 @@ def run():
 
         if n == 0:
             failed_prefs.append(pref_code)
-            tqdm.write(f"  ❌ {pref_code}: データなし（スキップ）")
+            tqdm.write(f"  NG {pref_code}: no data (skip)")
             continue
 
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(geojson, f, ensure_ascii=False, separators=(",", ":"))
 
-        tqdm.write(f"  ✅ {pref_code}: {n} 市区町村")
+        tqdm.write(f"  OK {pref_code}: {n} cities")
         time.sleep(0.5)  # GitHub API レート制限対策
 
     print(f"\n{'=' * 50}")

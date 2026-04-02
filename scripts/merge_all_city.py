@@ -15,13 +15,13 @@ import pandas as pd
 import numpy as np
 
 # 「低いほど良い」指標 → 反転
-INVERSE_CITY = ["高齢化率"]
+INVERSE_CITY = ["65歳以上割合", "1畳当たり家賃"]
 
 # 市区町村レベルで集計する次元 (county-level dims)
 # 利用可能な指標から将来性・生活利便性のみ計算
 CITY_DIM_INDICATORS = {
-    "将来性":     ["人口増減率", "転入超過率", "高齢化率"],      # 高齢化率は反転
-    "生活利便性": ["持ち家比率", "住宅延べ面積"],               # 都道府県から引き継ぐ残り3指標
+    "将来性":     ["人口増減率", "転入超過率", "65歳以上割合"],   # 65歳以上割合は反転
+    "生活利便性": ["住宅延べ面積", "1畳当たり家賃"],              # 家賃は反転（低いほど良い）
 }
 
 # 都道府県順序（pref_code 付与用）
@@ -112,11 +112,11 @@ def run():
     # 都道府県内ランク
     df_out["rank_in_pref"] = df_out.groupby("pref_code")["total_score"].rank(
         ascending=False, method="min"
-    ).astype(int)
+    ).astype("Int64")
 
     # 全国ランク
     df_out = df_out.sort_values("total_score", ascending=False).reset_index(drop=True)
-    df_out["rank"] = df_out["total_score"].rank(ascending=False, method="min").astype(int)
+    df_out["rank"] = df_out["total_score"].rank(ascending=False, method="min").astype("Int64")
 
     out_path = "web/data/city_scores.json"
     df_out.to_json(out_path, orient="records", force_ascii=False, indent=2)

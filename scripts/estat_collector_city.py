@@ -2,12 +2,12 @@
 estat_collector_city.py
 e-Stat API から市区町村別データを一括取得するスクリプト
 
-取得指標 (lvArea=3 で市区町村レベルのみ):
-  - 人口増減率   (A表: 将来性)
-  - 高齢化率     (A表: 将来性・反転)
-  - 転入超過率   (A表: 将来性)
-  - 持ち家比率   (H表: 生活利便性)
-  - 住宅延べ面積 (H表: 生活利便性)
+取得指標:
+  - 人口増減率   (0000020301 A表市区町村: 将来性)
+  - 転入超過率   (0000020301 A表市区町村: 将来性)
+  - 65歳以上割合 (0000020301 A表市区町村: 将来性・反転)
+  - 住宅延べ面積 (0000020108 H表市区町村: 生活利便性)
+  - 1畳当たり家賃(0000020108 H表市区町村: 生活利便性)
 
 Usage:
     python scripts/estat_collector_city.py
@@ -29,15 +29,16 @@ ESTAT_APP_ID = os.getenv("ESTAT_APP_ID")
 BASE_URL = "https://api.e-stat.go.jp/rest/3.0/app/json/getStatsData"
 
 # 市区町村レベルで取得可能な指標
-# lvArea=3 → 市区町村レベルのみ（都道府県・全国を除外）
+# 0000020301: 社会・人口統計体系 A表 市区町村別（lvArea 不要）
+# 0000020108: 社会・人口統計体系 H表 市区町村別（lvArea 不要）
 CITY_TARGETS = {
-    # A表: 人口・世帯 (0000010201)
-    "人口増減率":  {"statsDataId": "0000010201", "cdCat01": "#A05101"},
-    "高齢化率":    {"statsDataId": "0000010201", "cdCat01": "#A03503"},
-    "転入超過率":  {"statsDataId": "0000010201", "cdCat01": "#A05301"},
-    # H表: 居住 (0000010208)
-    "持ち家比率":  {"statsDataId": "0000010208", "cdCat01": "#H01301"},
-    "住宅延べ面積":{"statsDataId": "0000010208", "cdCat01": "#H0210301"},
+    # A表市区町村 (0000020301)
+    "人口増減率":     {"statsDataId": "0000020301", "cdCat01": "#A05101"},
+    "転入超過率":     {"statsDataId": "0000020301", "cdCat01": "#A05301"},
+    "65歳以上割合":   {"statsDataId": "0000020301", "cdCat01": "#A03506"},
+    # H表市区町村 (0000020108)
+    "住宅延べ面積":   {"statsDataId": "0000020108", "cdCat01": "H2130"},
+    "1畳当たり家賃":  {"statsDataId": "0000020108", "cdCat01": "H4104"},
 }
 
 
@@ -55,12 +56,11 @@ def _session() -> requests.Session:
 
 
 def fetch_city_data(stats_data_id: str, cd_cat01: str) -> tuple[dict, str | None]:
-    """市区町村別データを取得 (lvArea=3)"""
+    """市区町村別データを取得"""
     base_params = {
         "appId":       ESTAT_APP_ID,
         "statsDataId": stats_data_id,
         "cdCat01":     cd_cat01,
-        "lvArea":      "3",        # 市区町村レベル
         "metaGetFlg":  "Y",
         "limit":       "100000",
     }

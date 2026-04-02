@@ -6,6 +6,9 @@
 data/raw/
 data/processed/
 
+# 市区町村境界データ（download_city_topo.py で生成、277MB）
+web/data/cities/
+
 # Python
 __pycache__/
 *.pyc
