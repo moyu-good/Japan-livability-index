@@ -4,9 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>日本 都道府県 宜居度指数 — Japan Livability Index</title>
+  <!-- OG / Twitter Card -->
+  <meta property="og:title" content="日本 都道府県 宜居度指数 — Japan Livability Index" />
+  <meta property="og:description" content="47都道府県・22指標のデータ分析。あなたに合った居住地を探す。Find the best place to live in Japan." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Japan Livability Index — 都道府県宜居度指数" />
+  <meta name="twitter:description" content="47 prefectures · 22 government indicators. Interactive livability rankings for Japan." />
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="src/i18n.js"></script>
   <style>
     /* ── Design tokens ─────────────────────────────────── */
@@ -16,7 +26,7 @@
       --surface2:  #f0ece4;
       --border:    #ddd8cf;
       --text:      #1c1a16;
-      --muted:     #797060;
+      --muted:     #5e5545;
       --accent:    #c0182b;   /* Japan red */
       --accent-lt: #fdf0f1;
       --gold:      #b07818;
@@ -146,6 +156,12 @@
       color: var(--muted); cursor: pointer; font-size: 0.9rem;
       padding: 0 0.2rem; flex-shrink: 0;
     }
+    #hero-banner.hero-fade { opacity: 0; transition: opacity 0.3s; }
+    #hero-banner.hero-fade-in { opacity: 1; transition: opacity 0.4s; }
+    .hero-dot-nav { display: flex; gap: 4px; align-items: center; }
+    .hero-dot { width: 5px; height: 5px; border-radius: 50%;
+      background: var(--border); cursor: pointer; transition: background 0.2s; }
+    .hero-dot.active { background: var(--accent); }
 
     /* ── Layout ────────────────────────────────────────── */
     .layout {
@@ -165,6 +181,13 @@
     }
     #map { width: 100%; height: 100%; }
     #map svg { width: 100%; height: 100%; }
+    #city-leaflet-map {
+      display: none;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 5;
+    }
+    .city-tooltip { font-size: 0.78rem; line-height: 1.4; }
+    .city-tooltip b { display: block; margin-bottom: 0.1rem; }
     #map-loading {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -321,12 +344,24 @@
     .custom-toggle .arrow { transition: transform 0.2s; display: inline-block; }
     .custom-toggle.open .arrow { transform: rotate(90deg); }
     #custom-sliders {
-      display: none; margin-top: 0.5rem;
-      padding: 0.5rem 0.4rem 0.2rem;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      padding: 0 0.4rem;
       background: var(--surface); border-radius: 6px;
-      border: 1px solid var(--border);
+      border: 1px solid transparent;
+      transition: max-height 0.3s ease, opacity 0.22s ease,
+                  padding 0.3s ease, border-color 0.22s ease, margin-top 0.3s ease;
+      margin-top: 0;
     }
-    #custom-sliders.show { display: block; }
+    #custom-sliders.show {
+      max-height: 260px;
+      opacity: 1;
+      padding: 0.5rem 0.4rem 0.2rem;
+      border-color: var(--border);
+      margin-top: 0.5rem;
+    }
+    .rank-item { will-change: transform; }
     .slider-row {
       display: flex; align-items: center; gap: 0.45rem;
       margin-bottom: 0.45rem;
@@ -488,18 +523,16 @@
 
     #detail-drill-btn {
       display: none;
-      margin-top: 0.55rem;
-      padding-top: 0.55rem;
-      border-top: 1px solid var(--border);
+      margin-bottom: 0.7rem;
     }
     .drill-btn {
-      width: 100%; padding: 0.42rem 0; font-size: 0.75rem;
-      background: transparent; border: 1px solid var(--border);
-      color: var(--blue); border-radius: 5px; cursor: pointer;
-      transition: all 0.12s; display: flex; align-items: center;
-      justify-content: center; gap: 0.28rem;
+      width: 100%; padding: 0.62rem; font-size: 0.82rem; font-weight: 600;
+      background: var(--blue); border: none;
+      color: #fff; border-radius: 7px; cursor: pointer;
+      transition: background 0.12s; display: flex; align-items: center;
+      justify-content: center; gap: 0.35rem;
     }
-    .drill-btn:hover { background: #eff4fc; border-color: var(--blue); }
+    .drill-btn:hover { background: #1445a0; }
 
     .drill-header {
       display: flex; align-items: baseline; justify-content: space-between;
@@ -601,8 +634,6 @@
     body.screenshot-mode header { display: none; }
     body.screenshot-mode #hero-banner { display: none; }
     body.screenshot-mode #sample-banner { display: none; }
-    body.screenshot-mode #sidebar { display: none; }
-    body.screenshot-mode .layout { grid-template-columns: 1fr; }
     body.screenshot-mode .zoom-controls { display: none; }
     body.screenshot-mode .zoom-hint { display: none; }
     body.screenshot-mode #map-container::after {
@@ -624,40 +655,101 @@
 
     /* ── Mobile ─────────────────────────────────────────── */
     @media (max-width: 767px) {
-      body { overflow: auto; height: auto; min-height: 100dvh; }
+      /* Body: scrollable column layout */
+      body {
+        overflow: auto;
+        height: auto;
+        min-height: 100dvh;
+        flex-direction: column;
+      }
+
+      /* Header: compact */
+      header { padding: 0.5rem 0.85rem; gap: 0.5rem; }
+      header h1 { font-size: 0.95rem; }
+      header p { display: none; }
+      .header-btn span:not(.btn-icon) { display: none; }
+      .header-btn { padding: 0.3rem 0.4rem; min-width: 32px; justify-content: center; }
+
+      /* Hero banner: wrap tightly */
+      #hero-banner {
+        flex-wrap: wrap;
+        padding: 0.4rem 0.85rem;
+        gap: 0.3rem;
+        font-size: 0.75rem;
+      }
+      #hero-banner .hero-name { font-size: 0.88rem; }
+      #hero-banner .hero-insight { font-size: 0.68rem; }
+
+      /* Layout: single-column */
       .layout {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto;
+        grid-template-rows: 52vw 1fr;
+        flex: none;
+        height: auto;
         overflow: visible;
       }
+
+      /* Map: fixed height, full width */
       #map-container {
-        height: 56vw;
+        height: 52vw;
         min-height: 220px;
         border-right: none;
         border-bottom: 1px solid var(--border);
       }
+      .zoom-hint { display: none; }
+
+      /* Sidebar: full width, no fixed height — scrolls with page */
       #sidebar {
         overflow: visible;
         height: auto;
         border-left: none;
+        border-top: 1px solid var(--border);
       }
+
+      /* Weight panel: tighter */
+      #weight-panel { padding: 0.6rem 0.85rem; }
+      .preset-buttons {
+        display: flex; flex-wrap: nowrap; overflow-x: auto;
+        gap: 0.3rem; padding-bottom: 0.15rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .preset-buttons::-webkit-scrollbar { display: none; }
+      .preset-btn { white-space: nowrap; flex-shrink: 0; }
+
+      /* Rank list: full scroll, no clip */
       #rank-section {
         overflow: visible;
         max-height: none;
+        padding: 0.5rem 0.85rem;
       }
-      header h1 { font-size: 1rem; }
-      header p { display: none; }
-      .header-btn span:not(.btn-icon) { display: none; }
-      .header-btn { padding: 0.3rem; }
-      .zoom-hint { display: none; }
-      #hero-banner { flex-wrap: wrap; }
-      .detail-panel { border-radius: 0; margin: 0; border-left: none; border-right: none; }
+
+      /* Detail panel: flush edges */
+      .detail-panel {
+        border-radius: 0;
+        margin: 0;
+        border-left: none;
+        border-right: none;
+        margin-top: 0.5rem;
+      }
+
+      /* Method modal: full screen on mobile */
+      .method-box {
+        max-width: 100%;
+        border-radius: 12px 12px 0 0;
+        max-height: 85vh;
+        margin-top: auto;
+      }
+      #method-modal { align-items: flex-end; padding: 0; }
+
+      /* City leaflet map height */
+      #city-leaflet-map { min-height: 52vw; }
     }
 
     @media (max-width: 480px) {
-      header { padding: 0.5rem 0.75rem; gap: 0.5rem; }
-      #weight-panel { padding: 0.6rem 0.75rem; }
-      #rank-section { padding: 0.5rem 0.75rem; }
+      #weight-panel { padding: 0.5rem 0.65rem; }
+      #rank-section { padding: 0.45rem 0.65rem; }
+      header { padding: 0.45rem 0.65rem; gap: 0.4rem; }
     }
   </style>
 </head>
@@ -670,7 +762,7 @@
 
   <header>
     <h1 id="header-title" data-i18n="title">&#x1F5FE; 日本 都道府県 <span class="accent">宜居度</span>指数</h1>
-    <p id="header-subtitle" data-i18n="subtitle">47都道府県・16指標のデータ分析。あなたに合った居住地を探す。</p>
+    <p id="header-subtitle" data-i18n="subtitle">47都道府県・22指標のデータ分析。あなたに合った居住地を探す。</p>
     <div class="header-actions">
       <div class="lang-switcher" role="group" aria-label="Language">
         <button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')">日</button>
@@ -692,12 +784,13 @@
   <!-- Narrative hero banner (filled by app.js after data loads) -->
   <div id="hero-banner">
     <div class="hero-top">
-      <span class="hero-rank">#1</span>
+      <span class="hero-rank" id="hero-rank">#1</span>
       <span class="hero-name" id="hero-name">—</span>
       <span class="hero-score" id="hero-score"></span>
     </div>
     <span class="hero-sep">|</span>
     <span class="hero-insight" id="hero-insight"></span>
+    <div class="hero-dot-nav" id="hero-dots"></div>
     <button class="hero-dismiss" onclick="dismissHero()" aria-label="閉じる">×</button>
   </div>
 
@@ -705,6 +798,7 @@
     <!-- Map -->
     <div id="map-container">
       <div id="map" aria-label="日本都道府県地図"></div>
+      <div id="city-leaflet-map"></div>
       <div id="map-loading">
         <div class="spinner"></div>
         <span>地図データを読み込み中...</span>
@@ -758,6 +852,11 @@
             <div data-i18n="detail_empty">都道府県をクリックして詳細を表示</div>
           </div>
           <div class="detail-content" id="detail-content">
+            <div id="detail-drill-btn">
+              <button class="drill-btn" onclick="drillDown(selectedPref)">
+                📍 市区町村を探索する
+              </button>
+            </div>
             <h3 id="detail-name"></h3>
             <div class="view-toggle" id="view-toggle">
               <button class="active" data-view="bar" onclick="setDetailView('bar')" data-i18n="view_bar">バー</button>
@@ -770,11 +869,6 @@
               <select id="compare-select" onchange="onCompareChange(this.value)">
                 <option value="">-- 比較なし --</option>
               </select>
-            </div>
-            <div id="detail-drill-btn">
-              <button class="drill-btn" onclick="drillDown(selectedPref)">
-                🔍 市区町村を見る
-              </button>
             </div>
           </div>
         </div>

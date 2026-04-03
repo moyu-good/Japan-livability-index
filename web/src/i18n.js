@@ -6,7 +6,7 @@
 const LANG_STRINGS = {
   ja: {
     title:          "&#x1F5FE; 日本 都道府県 宜居度指数",
-    subtitle:       "47都道府県・16指標のデータ分析。あなたに合った居住地を探す。",
+    subtitle:       "47都道府県・22指標のデータ分析。あなたに合った居住地を探す。",
     btn_csv:        "CSV",
     btn_screenshot: "截図",
     btn_share:      "共有",
@@ -34,7 +34,7 @@ const LANG_STRINGS = {
   },
   zh: {
     title:          "&#x1F5FE; 日本都道府县宜居指数",
-    subtitle:       "47个都道府县·16项指标数据分析，找到最适合你的居住地。",
+    subtitle:       "47个都道府县·22项指标数据分析，找到最适合你的居住地。",
     btn_csv:        "CSV",
     btn_screenshot: "截图",
     btn_share:      "分享",
@@ -62,7 +62,7 @@ const LANG_STRINGS = {
   },
   en: {
     title:          "&#x1F5FE; Japan Prefecture Livability Index",
-    subtitle:       "47 prefectures · 16 indicators. Find the best place to live in Japan.",
+    subtitle:       "47 prefectures · 22 indicators. Find the best place to live in Japan.",
     btn_csv:        "CSV",
     btn_screenshot: "Screenshot",
     btn_share:      "Share",

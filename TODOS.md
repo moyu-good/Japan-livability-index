@@ -22,22 +22,14 @@ but should be addressed in future iterations.
   都道府県幸福度ランキング? Should be addressed in the main article, but a full
   comparative analysis can wait.
 
-## CEO Expansion — In-Scope (Phase 9–16, from /plan-ceo-review 2026-04-02)
+## CEO Expansion — Phases 9–16（已完成，2026-04-02）
 
-- [ ] **Phase 9: 视觉重设计** — 白底暖调数据新闻风，截图即海报。替换当前GitHub Dark主题。
-- [ ] **Phase 10: 移动端完全适配** — 竖屏优先布局，底部抽屉式侧栏，触摸手势地图。发布阻断项。
-- [ ] **Phase 11: 叙事层** — 首屏hero callout（「福井#1，东京#3」），每个都道府县自动生成惊喜结论chip。
-- [ ] **Phase 12: 方法论透明面板** — 点击任意维度/指标弹出详细卡片（定义+来源+年份+选择理由）。
-- [ ] **Phase 13: 分享功能** — URL参数编码选中都道府县+自定义权重，复制链接按钮。
-- [ ] **Phase 14: 截图模式** — 一键切换专用截图布局（1:1裁剪，出处水印，隐藏UI控件）。
-- [ ] **Phase 15: 市区町村视觉修复** — 分位数色标，大熊町异常值气泡注释，无数据城市斜线图案。
-- [ ] **Phase 16: Vercel部署** — git remote + Vercel配置 + 公开URL。工具帖发布前提。
+Phase 9-16 已全部在 commit ee06453 中实现。✅
 
 ## Design Debt (from /plan-design-review 2026-03-31)
 
-- [ ] **Header 指標数修正** — index.html header の「20指標」を「15指標」に修正、
-  または具体的な数字を削除する。ユーザーに見える事実誤りで信頼性を損なう。
-  Depends on: P0 データパイプライン完了（最終的な指標数確定後）
+- [x] **Header 指標数修正** — 「20指標」を「22指標」に修正完了（i18n.js 3言語 + index.html）。
+  22指標 = 経済4 + 居住7 + 環境4 + 医療4 + 将来3。
 
 - [ ] **DESIGN.md 作成** — CSS変数、コンポーネント仕様、レスポンシブルール、
   アクセシビリティ基準を一元管理する設計システムファイルを作成する。
@@ -45,17 +37,10 @@ but should be addressed in future iterations.
   `/design-consultation` スキルで作成推奨。
   Depends on: P1 Web可視化完了後
 
-- [ ] **--muted カラーコントラスト修正** — `--muted` を `#8b949e` → `#9ca3af` に
-  変更し WCAG AA 小文字コントラスト基準（4.5:1）を満たす。サイドバーの全ラベル・
-  スコア・ヒントテキストに影響。
-  Depends on: なし（即座に修正可能）
+- [x] **--muted カラーコントラスト修正** — `#6a6050` → `#5e5545` に変更。
+  ライトテーマ（bg: #f7f4ef）上で WCAG AA 4.5:1 以上を確保。
 
 ## Content Notes
 
-- [ ] **Prefecture ≠ city disclaimer** — Must be clearly stated in all Xiaohongshu posts.
-  東京都 includes rural western areas; Osaka-fu includes Nishiyoshino-mura. The ranking
-  reflects prefecture-level aggregates, not urban core quality.
-
-- [ ] **Weight methodology transparency** — Article must state which preset produces the
-  headline "Tokyo not #1" result. Use the default equal-weighted or "家庭向け" preset and
-  be explicit about it.
+- [ ] **Prefecture ≠ city disclaimer** — 都道府県レベルの集計であり、都市部の評価ではない。
+  東京都には農村地帯も含む。方法論弾窗に記載すべき重要な注意事項。
